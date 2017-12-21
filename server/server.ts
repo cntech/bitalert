@@ -2,9 +2,10 @@ import * as express from 'express'
 import * as path from 'path'
 import * as nodemailer from 'nodemailer'
 import * as nodeCrypto from 'crypto'
+import * as Pusher from 'pusher-js'
 
 interface Threshold {
-  readonly orientation: 'upper' | 'lower'
+  readonly orientation: 'up' | 'down'
   readonly amount: number
 }
 type Subscriber = ReadonlyArray<Threshold>
@@ -26,9 +27,72 @@ const app = express()
 const mail = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'bit2alert@gmail.com',
-    pass: 'jGL9aJWv'
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS
   }
+})
+const bitstamprAppKey = 'de504dc5763aeef9ff52'
+const pusher = new Pusher(bitstamprAppKey)
+const liveTradesChannel: Pusher.Channel = pusher.subscribe('live_trades_btceur')
+
+let price: number
+liveTradesChannel.bind('trade', trade => {
+  console.log('TRADE', trade)
+  const oldPrice: number = price
+  const newPrice: number = trade.price
+  price = newPrice // update the price
+  const up: boolean = newPrice >= oldPrice
+  const down: boolean = newPrice <= oldPrice
+  const thresholds = Object
+    .keys(subscribers)
+    .map(key => subscribers[key].map(threshold => ({
+      subscriber: key,
+      threshold
+    })))
+    .reduce((accu, subscriber) => [...accu, ...subscriber], [])
+  const matchingUpThresholds = up? thresholds
+    .filter(threshold => {
+      if(threshold.threshold.orientation === 'up') {
+        if(threshold.threshold.amount >= oldPrice) {
+          if(threshold.threshold.amount <= newPrice) {
+            return true
+          }
+        }
+      }
+      return false
+    }) : []
+  const matchingDownThresholds = down? thresholds
+    .filter(threshold => {
+      if(threshold.threshold.orientation === 'down') {
+        if(threshold.threshold.amount <= oldPrice) {
+          if(threshold.threshold.amount >= newPrice) {
+            return true
+          }
+        }
+      }
+      return false
+    }) : []
+  console.log('THRESHOLDS', thresholds)
+  console.log('MATCHING UP', matchingUpThresholds)
+  console.log('MATCHING DOWN', matchingDownThresholds)
+  matchingUpThresholds.forEach(async threshold => {
+    await mail.sendMail({
+      to: threshold.subscriber,
+      subject: 'Bit Alert: Up Threshold crossed',
+      text: `Up Threshold: ${threshold.threshold.amount} EUR
+Price before: ${oldPrice} EUR
+Price after: ${newPrice} EUR`
+    })
+  })
+  matchingDownThresholds.forEach(async threshold => {
+    await mail.sendMail({
+      to: threshold.subscriber,
+      subject: 'Bit Alert: Down Threshold crossed',
+      text: `Down Threshold: ${threshold.threshold.amount} EUR
+Price before: ${oldPrice} EUR
+Price after: ${newPrice} EUR`
+    })
+  })
 })
 
 app.use(express.static('dist'))
@@ -80,8 +144,8 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
     res.status(400).end()
     return {}
   }
-  if(orientation !== 'upper') {
-    if(orientation !== 'lower') {
+  if(orientation !== 'up') {
+    if(orientation !== 'down') {
       res.status(400).end()
       return {}
     }
