@@ -130,7 +130,7 @@ app.get('/activate/:activationCode', (req, res) => {
   candidates = Object.keys(candidates).reduce((accu, key) => key === activationCode? accu : { ...accu, [key]: candidates[key] }, {})
   console.log('CANDIDATES AFTER', candidates)
   console.log('SUBSCRIBERS', subscribers)
-  res.status(200).end()
+  res.redirect('/')
 })
 
 function requestToSubscriberAndThreshold(req: express.Request, res: express.Response): {
