@@ -22,6 +22,8 @@ interface Threshold {
 export class AppComponent {
   @ViewChild(DxDataGridComponent) thresholdGrid: DxDataGridComponent
 
+  registered: boolean
+  activated: boolean
   readonly priceObservable = new BehaviorSubject<number>(void 0)
   readonly currency: string = 'EUR'
   thresholdsLoaded: boolean = false
@@ -50,9 +52,14 @@ export class AppComponent {
   async loadThresholds() {
     const baseUrl: string = this.baseUrl
     if(baseUrl) {
-      const thresholds: ReadonlyArray<Threshold> = await this.httpClient.get(`${baseUrl}/thresholds`).toPromise<any>()
-      this._thresholds = thresholds
-      this.thresholdsLoaded = true
+      try {
+        const thresholds: ReadonlyArray<Threshold> = await this.httpClient.get(`${baseUrl}/thresholds`).toPromise<any>()
+        this._thresholds = thresholds
+        this.thresholdsLoaded = true
+        this.activated = true
+      } catch(e) {
+        this.activated = false
+      }
     } else {
       this.thresholdsLoaded = false
     }
@@ -83,6 +90,13 @@ export class AppComponent {
     this._thresholds = thresholds
   }
 
+  async onRegisterButtonClicked() {
+    const emailAddress: string = this.emailAddress
+    if(emailAddress) {
+      await this.httpClient.get(`/register/${emailAddress}`).toPromise()
+      this.registered = true
+    }
+  }
   onAddThresholdButtonClicked() {
     this.thresholdGrid.instance.addRow()
   }

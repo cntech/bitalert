@@ -10,25 +10,33 @@
   ></dx-text-box>
 </div>
 
-<div class="section">
-  <dx-button text="Add a new Threshold" (onClick)="onAddThresholdButtonClicked()"></dx-button>
+<div *ngIf="activated === false">
+  <p>This e-mail address is not activated.</p>
+  <dx-button *ngIf="!registered" text="Register" (onClick)="onRegisterButtonClicked()"></dx-button>
 </div>
 
-<div *ngIf="thresholdsLoaded" class="section">
-  <dx-data-grid
-    [(dataSource)]="thresholds"
-    [editing]="{ allowUpdating: true, allowDeleting: true }"
-    (onRowUpdated)="onRowUpdated()"
-    >
-    <dxi-column dataField="orientation">
-      <dxo-lookup
-        [dataSource]="upDownOptions"
-        valueExpr="value"
-        displayExpr="text"
-      ></dxo-lookup>
-    </dxi-column>
-    <dxi-column dataField="price">
-      <dxi-validation-rule type="pattern" [pattern]="pricePattern" message="price must be an integer number"></dxi-validation-rule>
-    </dxi-column>
-  </dx-data-grid>
+<div *ngIf="activated">
+  <div *ngIf="thresholdsLoaded" class="section">
+    <div class="section">
+      <dx-button text="Add a new Threshold" (onClick)="onAddThresholdButtonClicked()"></dx-button>
+    </div>
+    <div class="section">
+      <dx-data-grid
+        [(dataSource)]="thresholds"
+        [editing]="{ allowUpdating: true, allowDeleting: true }"
+        (onRowUpdated)="onRowUpdated()"
+        >
+        <dxi-column dataField="orientation">
+          <dxo-lookup
+            [dataSource]="upDownOptions"
+            valueExpr="value"
+            displayExpr="text"
+          ></dxo-lookup>
+        </dxi-column>
+        <dxi-column dataField="price">
+          <dxi-validation-rule type="pattern" [pattern]="pricePattern" message="price must be an integer number"></dxi-validation-rule>
+        </dxi-column>
+      </dx-data-grid>
+    </div>
+  </div>
 </div>
