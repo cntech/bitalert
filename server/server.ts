@@ -24,6 +24,8 @@ function thresholdsEqual(a: Threshold, b: Threshold): boolean {
 let candidates: { readonly [key: string]: string } = {}
 let subscribers: { readonly [key: string]: Subscriber } = {}
 
+const baseUrl: string = process.env.BASE_URL
+
 const app = express()
 const mail = nodemailer.createTransport({
   service: 'gmail',
@@ -111,7 +113,7 @@ app.get('/register/:emailAddress', async (req, res) => {
   await mail.sendMail({
     to: emailAddress,
     subject: 'Activate your Bit Alert',
-    text: `http://localhost:8080/activate/${activationCode}`
+    text: `${baseUrl}/activate/${activationCode}`
   })
   res.status(200).end()
 })
