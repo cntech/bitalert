@@ -109,7 +109,7 @@ app.get('/register/:emailAddress', async (req, res) => {
   // update candidates
   candidates = { ...candidates, [activationCode]: emailAddress }
   await mail.sendMail({
-    to: 'cndreiter@gmail.com',
+    to: emailAddress,
     subject: 'Activate your Bit Alert',
     text: `http://localhost:8080/activate/${activationCode}`
   })
