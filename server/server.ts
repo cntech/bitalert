@@ -1,4 +1,5 @@
 import * as express from 'express'
+import * as bodyParser from 'body-parser'
 import * as path from 'path'
 import * as nodemailer from 'nodemailer'
 import * as nodeCrypto from 'crypto'
@@ -96,6 +97,7 @@ Price after: ${newPrice} EUR`
 })
 
 app.use(express.static('dist'))
+app.use(bodyParser.json())
 
 app.get('/register/:emailAddress', async (req, res) => {
   const emailAddress = req.params.emailAddress
@@ -173,6 +175,16 @@ app.get('/users/:emailAddress/thresholds/remove/:orientation/:amount', (req, res
   }
   const updatedSubscriber: Subscriber = subscriber.filter(_ => !thresholdsEqual(_, threshold))
   subscribers = { ...subscribers, [emailAddress]: updatedSubscriber }
+  res.status(200).end()
+})
+app.post('/users/:emailAddress/thresholds', (req, res) => {
+  const emailAddress: string = req.params.emailAddress
+  const subscriber: Subscriber = subscribers[emailAddress]
+  if(!subscriber) {
+    res.status(404).end()
+    return
+  }
+  subscribers = { ...subscribers, [emailAddress]: req.body }
   res.status(200).end()
 })
 app.get('/users/:emailAddress/thresholds', (req, res) => {
