@@ -44,7 +44,7 @@ export class AppComponent {
   readonly pricePattern = /^[0-9]+$/
 
   constructor(readonly httpClient: HttpClient, readonly changeDetectorRef: ChangeDetectorRef) {
-    this.secret = location.href.match(/\/user\/([a-z0-9]+)$/)[1] || localStorage.getItem(SecretStorageKey)
+    this.secret = (location.href.match(/\/user\/([a-z0-9]+)$/) || [])[1] || localStorage.getItem(SecretStorageKey)
     this.loadThresholds()
     liveTradesChannel.bind('trade', trade => {
       this.priceObservable.next(trade.price)
