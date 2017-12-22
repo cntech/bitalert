@@ -65,6 +65,10 @@ export class AppComponent {
       }
     } else {
       this.thresholdsLoaded = false
+      if(this.emailAddress) {
+        // we have no secret, but we have an e-mail address => show the register button
+        this.activated = false
+      }
     }
   }
 
