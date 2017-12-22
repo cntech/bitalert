@@ -40,7 +40,7 @@ const liveTradesChannel: Pusher.Channel = pusher.subscribe('live_trades_btceur')
 
 let price: number
 liveTradesChannel.bind('trade', trade => {
-  console.log('TRADE', trade)
+  // console.log('TRADE', trade)
   const oldPrice: number = price
   const newPrice: number = trade.price
   price = newPrice // update the price
@@ -75,9 +75,13 @@ liveTradesChannel.bind('trade', trade => {
       }
       return false
     }) : []
-  console.log('THRESHOLDS', thresholds)
-  console.log('MATCHING UP', matchingUpThresholds)
-  console.log('MATCHING DOWN', matchingDownThresholds)
+  // console.log('THRESHOLDS', thresholds)
+  if(matchingUpThresholds.length > 0) {
+    console.log('MATCHING UP', matchingUpThresholds)
+  }
+  if(matchingDownThresholds.length > 0) {
+    console.log('MATCHING DOWN', matchingDownThresholds)
+  }
   matchingUpThresholds.forEach(async threshold => {
     await mail.sendMail({
       to: threshold.subscriber,
