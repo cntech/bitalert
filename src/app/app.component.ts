@@ -81,8 +81,9 @@ export class AppComponent {
   }
   get baseUrl(): string {
     const emailAddress = this.emailAddress
-    if(emailAddress) {
-      return `/api/users/${emailAddress}`
+    const secret = this.secret
+    if(emailAddress && secret) {
+      return `/api/users/${emailAddress}/${secret}`
     }
   }
   set emailAddress(emailAddress: string) {
