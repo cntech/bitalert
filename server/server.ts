@@ -232,7 +232,7 @@ app.get('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
 
 // everything else --> index.html
 app.get('/*', (req, res) => {
-   res.sendFile(path.join(__dirname, 'dist/index.html'))
+   res.sendFile(path.join(__dirname, '../dist/index.html'))
 })
 
 const host: string = process.env.HOST
