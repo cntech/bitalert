@@ -169,9 +169,11 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
   }
   const threshold: Threshold = { orientation, amount: +amountString }
   const subscriber: Subscriber = subscribers[emailAddress]
-  if(secret !== subscriber.secret) {
-    res.status(401).end()
-    return {}
+  if(subscriber) {
+    if(secret !== subscriber.secret) {
+      res.status(401).end()
+      return {}
+    }
   }
   return { emailAddress, subscriber, threshold }
 }
@@ -202,12 +204,12 @@ app.post('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
   const emailAddress: string = req.params.emailAddress
   const secret: string = req.params.secret
   const subscriber: Subscriber = subscribers[emailAddress]
-  if(secret !== subscriber.secret) {
-    res.status(401).end()
-    return
-  }
   if(!subscriber) {
     res.status(404).end()
+    return
+  }
+  if(secret !== subscriber.secret) {
+    res.status(401).end()
     return
   }
   subscribers = { ...subscribers, [emailAddress]: { ...subscriber, thresholds: req.body } }
@@ -217,12 +219,12 @@ app.get('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
   const emailAddress: string = req.params.emailAddress
   const secret: string = req.params.secret
   const subscriber: Subscriber = subscribers[emailAddress]
-  if(secret !== subscriber.secret) {
-    res.status(401).end()
-    return
-  }
   if(!subscriber) {
     res.status(404).end()
+    return
+  }
+  if(secret !== subscriber.secret) {
+    res.status(401).end()
     return
   }
   res.json(subscriber.thresholds).end()
