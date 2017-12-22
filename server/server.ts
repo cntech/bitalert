@@ -139,7 +139,7 @@ app.get('/activate/:activationCode', async (req, res) => {
   // add the email address to the subscriber list
   const existingSubscriber = subscribers[emailAddress]
   const secret: string = await generateSecret()
-  subscribers = { ...subscribers, [emailAddress]: existingSubscriber || { secret, thresholds: [] } }
+  subscribers = { ...subscribers, [emailAddress]: existingSubscriber? { ...existingSubscriber, secret } : { secret, thresholds: [] } }
   console.log('CANDIDATES BEFORE', candidates)
   candidates = Object.keys(candidates).reduce((accu, key) => key === activationCode? accu : { ...accu, [key]: candidates[key] }, {})
   console.log('CANDIDATES AFTER', candidates)
