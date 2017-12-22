@@ -4,6 +4,7 @@ import { DxDataGridComponent } from 'devextreme-angular';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import * as Pusher from 'pusher-js'
 
+const SecretStorageKey = 'secret'
 const EmailAddressStorageKey = 'emailAddress'
 const bitstamprAppKey = 'de504dc5763aeef9ff52'
 const pusher = new Pusher(bitstamprAppKey)
@@ -27,6 +28,7 @@ export class AppComponent {
   readonly priceObservable = new BehaviorSubject<number>(void 0)
   readonly currency: string = 'EUR'
   thresholdsLoaded: boolean = false
+  _secret: string
   _emailAddress: string = localStorage.getItem(EmailAddressStorageKey)
   _thresholds: ReadonlyArray<Threshold> = []
   readonly upDownOptions: ReadonlyArray<{ readonly value: 'up'|'down', readonly text: string }> = [
@@ -42,6 +44,7 @@ export class AppComponent {
   readonly pricePattern = /^[0-9]+$/
 
   constructor(readonly httpClient: HttpClient, readonly changeDetectorRef: ChangeDetectorRef) {
+    this.secret = location.href.match(/\/user\/([a-z0-9]+)$/)[1] || localStorage.getItem(SecretStorageKey)
     this.loadThresholds()
     liveTradesChannel.bind('trade', trade => {
       this.priceObservable.next(trade.price)
@@ -65,13 +68,21 @@ export class AppComponent {
     }
   }
 
+  get secret(): string {
+    return this._secret
+  }
+  set secret(secret: string) {
+    this._secret = secret
+    localStorage.setItem(SecretStorageKey, secret)
+  }
+
   get emailAddress(): string {
     return this._emailAddress
   }
   get baseUrl(): string {
     const emailAddress = this.emailAddress
     if(emailAddress) {
-      return `/users/${emailAddress}`
+      return `/api/users/${emailAddress}`
     }
   }
   set emailAddress(emailAddress: string) {
@@ -93,7 +104,7 @@ export class AppComponent {
   async onRegisterButtonClicked() {
     const emailAddress: string = this.emailAddress
     if(emailAddress) {
-      await this.httpClient.get(`/register/${emailAddress}`).toPromise()
+      await this.httpClient.get(`/api/register/${emailAddress}`).toPromise()
       this.registered = true
     }
   }

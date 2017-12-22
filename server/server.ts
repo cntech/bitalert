@@ -9,7 +9,10 @@ interface Threshold {
   readonly orientation: 'up' | 'down'
   readonly amount: number
 }
-type Subscriber = ReadonlyArray<Threshold>
+interface Subscriber {
+  readonly secret: string
+  readonly thresholds: ReadonlyArray<Threshold>
+}
 
 function thresholdsEqual(a: Threshold, b: Threshold): boolean {
   if(a.orientation !== b.orientation) {
@@ -48,7 +51,7 @@ liveTradesChannel.bind('trade', trade => {
   const down: boolean = newPrice <= oldPrice
   const thresholds = Object
     .keys(subscribers)
-    .map(key => subscribers[key].map(threshold => ({
+    .map(key => subscribers[key].thresholds.map(threshold => ({
       subscriber: key,
       threshold
     })))
@@ -105,13 +108,17 @@ Price after: ${newPrice} EUR`
 app.use(express.static('dist'))
 app.use(bodyParser.json())
 
-app.get('/register/:emailAddress', async (req, res) => {
-  const emailAddress = req.params.emailAddress
-  const activationCodeBuffer: Buffer = await new Promise<Buffer>((resolve, reject) => {
+async function generateSecret(): Promise<string> {
+  const buffer: Buffer = await new Promise<Buffer>((resolve, reject) => {
     const numberOfBytes: number = 10
     nodeCrypto.randomBytes(numberOfBytes, (err, result) => err? reject(err) : resolve(result))
   })
-  const activationCode: string = activationCodeBuffer.toString('hex')
+  return buffer.toString('hex')
+}
+
+app.get('/api/register/:emailAddress', async (req, res) => {
+  const emailAddress = req.params.emailAddress
+  const activationCode = await generateSecret()
   // update candidates
   candidates = { ...candidates, [activationCode]: emailAddress }
   await mail.sendMail({
@@ -122,7 +129,7 @@ app.get('/register/:emailAddress', async (req, res) => {
   res.status(200).end()
 })
 
-app.get('/activate/:activationCode', (req, res) => {
+app.get('/activate/:activationCode', async (req, res) => {
   const activationCode: string = req.params.activationCode
   const emailAddress: string = candidates[activationCode]
   if(!emailAddress) {
@@ -131,12 +138,13 @@ app.get('/activate/:activationCode', (req, res) => {
   }
   // add the email address to the subscriber list
   const existingSubscriber = subscribers[emailAddress]
-  subscribers = { ...subscribers, [emailAddress]: existingSubscriber || [] }
+  const secret: string = await generateSecret()
+  subscribers = { ...subscribers, [emailAddress]: existingSubscriber || { secret, thresholds: [] } }
   console.log('CANDIDATES BEFORE', candidates)
   candidates = Object.keys(candidates).reduce((accu, key) => key === activationCode? accu : { ...accu, [key]: candidates[key] }, {})
   console.log('CANDIDATES AFTER', candidates)
   console.log('SUBSCRIBERS', subscribers)
-  res.redirect('/')
+  res.redirect(`/user/${secret}`)
 })
 
 function requestToSubscriberAndThreshold(req: express.Request, res: express.Response): {
@@ -146,6 +154,7 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
   readonly error?: boolean
 } {
   const emailAddress: string = req.params.emailAddress
+  const secret = req.params.secret
   const orientation: string = req.params.orientation
   const amountString: string = req.params.amount
   if(isNaN(<any>amountString)) {
@@ -160,47 +169,63 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
   }
   const threshold: Threshold = { orientation, amount: +amountString }
   const subscriber: Subscriber = subscribers[emailAddress]
+  if(secret !== subscriber.secret) {
+    res.status(401).end()
+    return {}
+  }
   return { emailAddress, subscriber, threshold }
 }
 
-app.get('/users/:emailAddress/thresholds/add/:orientation/:amount', (req, res) => {
+app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:amount', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
     res.status(404).end()
     return
   }
-  const updatedSubscriber: Subscriber = [...subscriber.filter(_ => !thresholdsEqual(_, threshold)), threshold]
+  const thresholds = subscriber.thresholds
+  const updatedSubscriber: Subscriber = { ...subscriber, thresholds: [...thresholds.filter(_ => !thresholdsEqual(_, threshold)), threshold] }
   subscribers = { ...subscribers, [emailAddress]: updatedSubscriber }
   res.status(200).end()
 })
-app.get('/users/:emailAddress/thresholds/remove/:orientation/:amount', (req, res) => {
+app.get('/api/users/:emailAddress/:secret/thresholds/remove/:orientation/:amount', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
     res.status(404).end()
     return
   }
-  const updatedSubscriber: Subscriber = subscriber.filter(_ => !thresholdsEqual(_, threshold))
+  const thresholds = subscriber.thresholds
+  const updatedSubscriber: Subscriber = { ...subscriber, thresholds: thresholds.filter(_ => !thresholdsEqual(_, threshold)) }
   subscribers = { ...subscribers, [emailAddress]: updatedSubscriber }
   res.status(200).end()
 })
-app.post('/users/:emailAddress/thresholds', (req, res) => {
+app.post('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
   const emailAddress: string = req.params.emailAddress
+  const secret: string = req.params.secret
   const subscriber: Subscriber = subscribers[emailAddress]
+  if(secret !== subscriber.secret) {
+    res.status(401).end()
+    return
+  }
   if(!subscriber) {
     res.status(404).end()
     return
   }
-  subscribers = { ...subscribers, [emailAddress]: req.body }
+  subscribers = { ...subscribers, [emailAddress]: { ...subscriber, thresholds: req.body } }
   res.status(200).end()
 })
-app.get('/users/:emailAddress/thresholds', (req, res) => {
+app.get('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
   const emailAddress: string = req.params.emailAddress
+  const secret: string = req.params.secret
   const subscriber: Subscriber = subscribers[emailAddress]
+  if(secret !== subscriber.secret) {
+    res.status(401).end()
+    return
+  }
   if(!subscriber) {
     res.status(404).end()
     return
   }
-  res.json(subscriber).end()
+  res.json(subscriber.thresholds).end()
 })
 
 // everything else --> index.html
