@@ -73,7 +73,9 @@ export class AppComponent {
   }
   set secret(secret: string) {
     this._secret = secret
-    localStorage.setItem(SecretStorageKey, secret)
+    if(secret) {
+      localStorage.setItem(SecretStorageKey, secret)
+    }
   }
 
   get emailAddress(): string {
