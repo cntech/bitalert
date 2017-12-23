@@ -3,6 +3,9 @@
 html, body {
   height: 100%;
 }
+body {
+  padding-bottom: 100px;
+}
 
 @import url("~devextreme/dist/css/dx.common.css");
 @import url("~devextreme/dist/css/dx.light.css");
