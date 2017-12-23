@@ -4,11 +4,8 @@ import * as path from 'path'
 import * as nodemailer from 'nodemailer'
 import * as nodeCrypto from 'crypto'
 import * as Pusher from 'pusher-js'
+import { Threshold } from '../src/common/threshold'
 
-interface Threshold {
-  readonly orientation: 'up' | 'down'
-  readonly amount: number
-}
 interface Subscriber {
   readonly secret: string
   readonly thresholds: ReadonlyArray<Threshold>
@@ -18,7 +15,7 @@ function thresholdsEqual(a: Threshold, b: Threshold): boolean {
   if(a.orientation !== b.orientation) {
     return false
   }
-  if(a.amount !== b.amount) {
+  if(a.price !== b.price) {
     return false
   }
   return true
@@ -47,6 +44,9 @@ liveTradesChannel.bind('trade', trade => {
   const oldPrice: number = price
   const newPrice: number = trade.price
   price = newPrice // update the price
+  if(oldPrice == null) {
+    return
+  }
   const up: boolean = newPrice >= oldPrice
   const down: boolean = newPrice <= oldPrice
   const thresholds = Object
@@ -58,9 +58,11 @@ liveTradesChannel.bind('trade', trade => {
     .reduce((accu, subscriber) => [...accu, ...subscriber], [])
   const matchingUpThresholds = up? thresholds
     .filter(threshold => {
-      if(threshold.threshold.orientation === 'up') {
-        if(threshold.threshold.amount >= oldPrice) {
-          if(threshold.threshold.amount <= newPrice) {
+      const orientation = threshold.threshold.orientation || 'any'
+      if((orientation === 'up') || (orientation === 'any')) {
+        console.log(threshold)
+        if(threshold.threshold.price >= oldPrice) {
+          if(threshold.threshold.price <= newPrice) {
             return true
           }
         }
@@ -69,9 +71,11 @@ liveTradesChannel.bind('trade', trade => {
     }) : []
   const matchingDownThresholds = down? thresholds
     .filter(threshold => {
-      if(threshold.threshold.orientation === 'down') {
-        if(threshold.threshold.amount <= oldPrice) {
-          if(threshold.threshold.amount >= newPrice) {
+      const orientation = threshold.threshold.orientation || 'any'
+      if((orientation === 'down') || (orientation === 'any')) {
+        console.log(threshold)
+        if(threshold.threshold.price <= oldPrice) {
+          if(threshold.threshold.price >= newPrice) {
             return true
           }
         }
@@ -89,7 +93,7 @@ liveTradesChannel.bind('trade', trade => {
     await mail.sendMail({
       to: threshold.subscriber,
       subject: 'Bit Alert: Up Threshold crossed',
-      text: `Up Threshold: ${threshold.threshold.amount} EUR
+      text: `Up Threshold: ${threshold.threshold.price} EUR
 Price before: ${oldPrice} EUR
 Price after: ${newPrice} EUR`
     })
@@ -98,7 +102,7 @@ Price after: ${newPrice} EUR`
     await mail.sendMail({
       to: threshold.subscriber,
       subject: 'Bit Alert: Down Threshold crossed',
-      text: `Down Threshold: ${threshold.threshold.amount} EUR
+      text: `Down Threshold: ${threshold.threshold.price} EUR
 Price before: ${oldPrice} EUR
 Price after: ${newPrice} EUR`
     })
@@ -156,8 +160,8 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
   const emailAddress: string = req.params.emailAddress
   const secret = req.params.secret
   const orientation: string = req.params.orientation
-  const amountString: string = req.params.amount
-  if(isNaN(<any>amountString)) {
+  const priceString: string = req.params.price
+  if(isNaN(<any>priceString)) {
     res.status(400).end()
     return {}
   }
@@ -167,7 +171,7 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
       return {}
     }
   }
-  const threshold: Threshold = { orientation, amount: +amountString }
+  const threshold: Threshold = { orientation, price: +priceString }
   const subscriber: Subscriber = subscribers[emailAddress]
   if(subscriber) {
     if(secret !== subscriber.secret) {
@@ -178,7 +182,7 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
   return { emailAddress, subscriber, threshold }
 }
 
-app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:amount', (req, res) => {
+app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:price', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
     res.status(404).end()
@@ -189,7 +193,7 @@ app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:amount', 
   subscribers = { ...subscribers, [emailAddress]: updatedSubscriber }
   res.status(200).end()
 })
-app.get('/api/users/:emailAddress/:secret/thresholds/remove/:orientation/:amount', (req, res) => {
+app.get('/api/users/:emailAddress/:secret/thresholds/remove/:orientation/:price', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
     res.status(404).end()
@@ -232,7 +236,7 @@ app.get('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
 
 // everything else --> index.html
 app.get('/*', (req, res) => {
-   res.sendFile(path.join(__dirname, '../dist/index.html'))
+   res.sendFile(path.join(__dirname, '../../dist/index.html'))
 })
 
 const host: string = process.env.HOST

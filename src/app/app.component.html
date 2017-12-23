@@ -4,10 +4,14 @@
 <h2 *ngIf="!(priceObservable | async)">...</h2>
 
 <div class="section">
-  <dx-text-box
+  <dx-text-box #emailAddressInput
     placeholder="Get started with your e-mail address"
     [(value)]="emailAddress"
   ></dx-text-box>
+</div>
+
+<div *ngIf="!emailAddress" class="section">
+  <dx-button text="Use this E-Mail Address" (onClick)="onUseEmailAddressButtonClicked()"></dx-button>
 </div>
 
 <div *ngIf="activated === false">
@@ -16,7 +20,7 @@
 </div>
 
 <div *ngIf="activated">
-  <div *ngIf="thresholdsLoaded" class="section">
+  <div *ngIf="thresholdsLoaded">
     <div class="section">
       <dx-button text="Add a new Threshold" (onClick)="onAddThresholdButtonClicked()"></dx-button>
     </div>
@@ -33,10 +37,14 @@
             displayExpr="text"
           ></dxo-lookup>
         </dxi-column>
-        <dxi-column dataField="price">
+        <dxi-column dataField="price" dataType="number">
           <dxi-validation-rule type="pattern" [pattern]="pricePattern" message="price must be an integer number"></dxi-validation-rule>
         </dxi-column>
       </dx-data-grid>
     </div>
   </div>
+</div>
+
+<div class="section">
+  <dx-button text="Reset Account" (onClick)="onResetAccountButtonClicked()"></dx-button>
 </div>

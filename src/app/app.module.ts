@@ -1,6 +1,6 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { DxTextBoxModule, DxDataGridModule, DxButtonModule } from 'devextreme-angular';
+import { DxTextBoxModule, DxDataGridModule, DxButtonModule, DxNumberBoxModule } from 'devextreme-angular';
 
 
 import { AppComponent } from './app.component';
@@ -16,6 +16,7 @@ import { HttpClientModule } from '@angular/common/http';
     BrowserModule,
     HttpClientModule,
     DxTextBoxModule,
+    DxNumberBoxModule,
     DxButtonModule,
     DxDataGridModule,
     DxiColumnModule

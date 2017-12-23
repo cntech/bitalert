@@ -1,8 +1,9 @@
 import { Component, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { DxDataGridComponent } from 'devextreme-angular';
+import { DxDataGridComponent, DxTextBoxComponent } from 'devextreme-angular';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import * as Pusher from 'pusher-js'
+import { Threshold } from '../common/threshold';
 
 const SecretStorageKey = 'secret'
 const EmailAddressStorageKey = 'emailAddress'
@@ -10,17 +11,13 @@ const bitstamprAppKey = 'de504dc5763aeef9ff52'
 const pusher = new Pusher(bitstamprAppKey)
 const liveTradesChannel: Pusher.Channel = pusher.subscribe('live_trades_btceur')
 
-interface Threshold {
-  readonly orientation: 'up' | 'down';
-  readonly price: number;
-}
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
+  @ViewChild('emailAddressInput') emailAddressInput: DxTextBoxComponent
   @ViewChild(DxDataGridComponent) thresholdGrid: DxDataGridComponent
 
   registered: boolean
@@ -31,7 +28,11 @@ export class AppComponent {
   _secret: string
   _emailAddress: string = localStorage.getItem(EmailAddressStorageKey)
   _thresholds: ReadonlyArray<Threshold> = []
-  readonly upDownOptions: ReadonlyArray<{ readonly value: 'up'|'down', readonly text: string }> = [
+  readonly upDownOptions: ReadonlyArray<{ readonly value: 'up'|'down'|'any', readonly text: string }> = [
+    {
+      value: 'any',
+      text: 'Up/Down Threshold'
+    },
     {
       value: 'up',
       text: 'Up Threshold'
@@ -108,6 +109,9 @@ export class AppComponent {
     this._thresholds = thresholds
   }
 
+  onUseEmailAddressButtonClicked() {
+    this.emailAddress = this.emailAddressInput.value
+  }
   async onRegisterButtonClicked() {
     const emailAddress: string = this.emailAddress
     if(emailAddress) {
@@ -120,6 +124,10 @@ export class AppComponent {
   }
   onRowUpdated() {
     this.thresholds = this._thresholds // call the setter
+  }
+  onResetAccountButtonClicked() {
+    localStorage.clear()
+    location.reload()
   }
 
 }
