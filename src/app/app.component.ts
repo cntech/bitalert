@@ -46,11 +46,23 @@ export class AppComponent {
 
   constructor(readonly httpClient: HttpClient, readonly changeDetectorRef: ChangeDetectorRef) {
     this.secret = (location.href.match(/\/user\/([a-z0-9]+)$/) || [])[1] || localStorage.getItem(SecretStorageKey)
-    this.loadThresholds()
+    this.fetchEmailAddress().then(() => this.loadThresholds())
     liveTradesChannel.bind('trade', trade => {
       this.priceObservable.next(trade.price)
       this.changeDetectorRef.detectChanges()
     })
+  }
+
+  async fetchEmailAddress() {
+    const secret: string = this.secret
+    if(secret) {
+      if(!this.emailAddress) {
+        const { emailAddress } = await this.httpClient.get(`/api/users/${secret}/email-address`).toPromise<any>()
+        if(emailAddress) {
+          this.emailAddress = emailAddress
+        }
+      }
+    }
   }
 
   async loadThresholds() {

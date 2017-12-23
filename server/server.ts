@@ -179,6 +179,23 @@ function requestToSubscriber(req: express.Request, res: express.Response, throwi
   return { emailAddress, subscriber }
 }
 
+function requestWithoutEmailAddressToSubscriber(req: express.Request, res: express.Response, throwing: boolean = false): {
+  readonly emailAddress?: string
+  readonly subscriber?: Subscriber
+} {
+  const secret: string = req.params.secret
+  const emailAddress: string = Object.keys(subscribers).find(key => subscribers[key].secret === secret)
+  const subscriber: Subscriber = subscribers[emailAddress]
+  if((!emailAddress) || (!subscriber)) {
+    res.status(404).end()
+    if(throwing) {
+      throw new Error('subscriber not found')
+    }
+    return {}
+  }
+  return { emailAddress, subscriber }
+}
+
 app.get('/api/unregister/:emailAddress/:secret', (req, res) => {
   const { emailAddress, subscriber } = requestToSubscriber(req, res)
   if(!subscriber) {
@@ -235,6 +252,13 @@ function requestToSubscriberAndThreshold(req: express.Request, res: express.Resp
   }
 }
 
+app.get('/api/users/:secret/email-address', (req, res) => {
+  const { emailAddress, subscriber } = requestWithoutEmailAddressToSubscriber(req, res)
+  if(!subscriber) {
+    return
+  }
+  res.json({ emailAddress }).end()
+})
 app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:price', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
