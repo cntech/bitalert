@@ -17,13 +17,18 @@
 
 <div *ngIf="activated === false">
   <p>This e-mail address is not activated.</p>
-  <dx-button *ngIf="!registered" text="Register" (onClick)="onRegisterButtonClicked()"></dx-button>
+  <p *ngIf="!registered"><dx-button text="Register" (onClick)="onRegisterButtonClicked()"></dx-button></p>
+  <p *ngIf="registered"><strong>Check your e-mail.</strong></p>
+  <h2>How does BitAlert work?</h2>
+  <p>BitAlert lets you define price thresholds and sends you e-mails if they are crossed by the BTC/EUR price.</p>
+  <p>Your account will be referenced by a URL in the form of {{ exampleUrl }}.</p>
+  <p>If you forget your URL, simply clear your local data and newly activate your e-mail address.</p>
 </div>
 
 <div *ngIf="activated">
   <div *ngIf="thresholdsLoaded">
     <div class="section">
-      <dx-button text="Add a new Threshold" (onClick)="onAddThresholdButtonClicked()"></dx-button>
+      <dx-button [text]="thresholdButtonText" (onClick)="onAddThresholdButtonClicked()"></dx-button>
     </div>
     <div class="section">
       <dx-data-grid
@@ -47,5 +52,6 @@
 </div>
 
 <div class="section">
-  <dx-button text="Reset Account" (onClick)="onResetAccountButtonClicked()"></dx-button>
+  <dx-button text="Clear Local Data" (onClick)="onResetAccountButtonClicked()"></dx-button>
+  <dx-button text="Delete Account" (onClick)="onDeleteAccountButtonClicked()" *ngIf="this.emailAddress && this.secret"></dx-button>
 </div>

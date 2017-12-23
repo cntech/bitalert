@@ -22,6 +22,7 @@ export class AppComponent {
 
   registered: boolean
   activated: boolean
+  readonly exampleUrl: string = `${location.protocol}${location.host}/user/a1b2c3`
   readonly priceObservable = new BehaviorSubject<number>(void 0)
   readonly currency: string = 'EUR'
   thresholdsLoaded: boolean = false
@@ -120,6 +121,16 @@ export class AppComponent {
     }
     this._thresholds = thresholds
   }
+  get thresholdButtonText(): string {
+    const n: number = this.thresholds.length
+    let thresholdsText: string
+    switch(n) {
+      case 0: thresholdsText = 'No threshold'; break
+      case 1: thresholdsText = '1 threshold'; break
+      default: thresholdsText = `${n} thresholds`; break
+    }
+    return `${thresholdsText} active | Add a new Threshold`
+  }
 
   onUseEmailAddressButtonClicked() {
     this.emailAddress = this.emailAddressInput.value
@@ -137,13 +148,19 @@ export class AppComponent {
   onRowUpdated() {
     this.thresholds = this._thresholds // call the setter
   }
+  clearLocalData() {
+    localStorage.clear()
+    location.href = '/'
+  }
   async onResetAccountButtonClicked() {
+    this.clearLocalData()
+  }
+  async onDeleteAccountButtonClicked(clientOnly: boolean = false) {
     const emailAddress: string = this.emailAddress
     const secret: string = this.secret
     if(emailAddress && secret) {
       await this.httpClient.get(`/api/unregister/${emailAddress}/${secret}`).toPromise()
-      localStorage.clear()
-      location.reload()
+      this.clearLocalData()
     }
   }
 
