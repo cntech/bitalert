@@ -60,7 +60,6 @@ liveTradesChannel.bind('trade', trade => {
     .filter(threshold => {
       const orientation = threshold.threshold.orientation || 'any'
       if((orientation === 'up') || (orientation === 'any')) {
-        console.log(threshold)
         if(threshold.threshold.price >= oldPrice) {
           if(threshold.threshold.price <= newPrice) {
             return true
@@ -73,7 +72,6 @@ liveTradesChannel.bind('trade', trade => {
     .filter(threshold => {
       const orientation = threshold.threshold.orientation || 'any'
       if((orientation === 'down') || (orientation === 'any')) {
-        console.log(threshold)
         if(threshold.threshold.price <= oldPrice) {
           if(threshold.threshold.price >= newPrice) {
             return true
@@ -83,12 +81,12 @@ liveTradesChannel.bind('trade', trade => {
       return false
     }) : []
   // console.log('THRESHOLDS', thresholds)
-  if(matchingUpThresholds.length > 0) {
-    console.log('MATCHING UP', matchingUpThresholds)
-  }
-  if(matchingDownThresholds.length > 0) {
-    console.log('MATCHING DOWN', matchingDownThresholds)
-  }
+  // if(matchingUpThresholds.length > 0) {
+  //   console.log('MATCHING UP', matchingUpThresholds)
+  // }
+  // if(matchingDownThresholds.length > 0) {
+  //   console.log('MATCHING DOWN', matchingDownThresholds)
+  // }
   matchingUpThresholds.forEach(async threshold => {
     await mail.sendMail({
       to: threshold.subscriber,
