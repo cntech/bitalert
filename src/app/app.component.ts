@@ -22,7 +22,7 @@ export class AppComponent {
 
   registered: boolean
   activated: boolean
-  readonly exampleUrl: string = `${location.protocol}${location.host}/user/a1b2c3`
+  readonly exampleUrl: string = `${location.protocol}//${location.host}/user/a1b2c3`
   readonly priceObservable = new BehaviorSubject<number>(void 0)
   readonly currency: string = 'EUR'
   thresholdsLoaded: boolean = false
