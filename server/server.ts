@@ -148,7 +148,13 @@ app.get('/activate/:activationCode', async (req, res) => {
   candidates = Object.keys(candidates).reduce((accu, key) => key === activationCode? accu : { ...accu, [key]: candidates[key] }, {})
   console.log('CANDIDATES AFTER', candidates)
   console.log('SUBSCRIBERS', subscribers)
-  res.redirect(`/user/${secret}`)
+  const userPath: string = `/user/${secret}`
+  res.redirect(userPath)
+  mail.sendMail({
+    to: emailAddress,
+    subject: 'Start configuring your newly activated Bit Alert',
+    text: `${baseUrl}${userPath}`
+  })
 })
 
 function requestToSubscriberAndThreshold(req: express.Request, res: express.Response): {
