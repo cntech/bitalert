@@ -1,4 +1,6 @@
+export type ThresholdOrientation = 'up' | 'down' | 'any'
+
 export interface Threshold {
-  readonly orientation: 'up' | 'down' | 'any'
+  readonly orientation: ThresholdOrientation
   readonly price: number
 }

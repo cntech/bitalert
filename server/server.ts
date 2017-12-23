@@ -4,7 +4,7 @@ import * as path from 'path'
 import * as nodemailer from 'nodemailer'
 import * as nodeCrypto from 'crypto'
 import * as Pusher from 'pusher-js'
-import { Threshold } from '../src/common/threshold'
+import { Threshold, ThresholdOrientation } from '../src/common/threshold'
 
 interface Subscriber {
   readonly secret: string
@@ -58,7 +58,7 @@ liveTradesChannel.bind('trade', trade => {
     .reduce((accu, subscriber) => [...accu, ...subscriber], [])
   const matchingUpThresholds = up? thresholds
     .filter(threshold => {
-      const orientation = threshold.threshold.orientation || 'any'
+      const orientation: ThresholdOrientation = threshold.threshold.orientation || 'any'
       if((orientation === 'up') || (orientation === 'any')) {
         if(threshold.threshold.price >= oldPrice) {
           if(threshold.threshold.price <= newPrice) {
@@ -70,7 +70,7 @@ liveTradesChannel.bind('trade', trade => {
     }) : []
   const matchingDownThresholds = down? thresholds
     .filter(threshold => {
-      const orientation = threshold.threshold.orientation || 'any'
+      const orientation: ThresholdOrientation = threshold.threshold.orientation || 'any'
       if((orientation === 'down') || (orientation === 'any')) {
         if(threshold.threshold.price <= oldPrice) {
           if(threshold.threshold.price >= newPrice) {
@@ -155,41 +155,89 @@ app.get('/activate/:activationCode', async (req, res) => {
   })
 })
 
+function requestToSubscriber(req: express.Request, res: express.Response, throwing: boolean = false): {
+  readonly emailAddress?: string
+  readonly subscriber?: Subscriber
+} {
+  const emailAddress: string = req.params.emailAddress
+  const secret = req.params.secret
+  const subscriber: Subscriber = subscribers[emailAddress]
+  if(!subscriber) {
+    res.status(404).end()
+    if(throwing) {
+      throw new Error('subscriber not found')
+    }
+    return {}
+  }
+  if(secret !== subscriber.secret) {
+    res.status(401).end()
+    if(throwing) {
+      throw new Error('subscriber not authorized')
+    }
+    return {}
+  }
+  return { emailAddress, subscriber }
+}
+
+app.get('/api/unregister/:emailAddress/:secret', (req, res) => {
+  const { emailAddress, subscriber } = requestToSubscriber(req, res)
+  if(!subscriber) {
+    return
+  }
+  console.log('UNREGISTERING', emailAddress, subscribers)
+  subscribers = Object.keys(subscribers).reduce((accu, subscriber) => (subscriber === emailAddress)? accu : { ...accu, [subscriber]: subscribers[subscriber] }, {})
+  console.log('SUBSCRIBERS AFTER UNREGISTRING', subscribers)
+  res.status(200).end()
+})
+
+function requestToOrientation(req: express.Request, res: express.Response, throwing: boolean = false): ThresholdOrientation {
+  const orientation: string = req.params.orientation || 'any'
+  if(orientation !== 'up') {
+    if(orientation !== 'down') {
+      if(orientation !== 'any') {
+        res.status(400).end()
+        if(throwing) {
+          throw new Error('invalid threshold orientation')
+        }
+        return
+      }
+    }
+  }
+  return orientation
+}
+
+function requestToPrice(req: express.Request, res: express.Response, throwing: boolean = false): number {
+  const priceString: string = req.params.price
+  if((priceString == null) || isNaN(<any>priceString)) {
+    res.status(400).end()
+    if(throwing) {
+      throw new Error('price is not a numebr')
+    }
+    return
+  }
+  return +priceString
+}
+
 function requestToSubscriberAndThreshold(req: express.Request, res: express.Response): {
   readonly emailAddress?: string
   readonly subscriber?: Subscriber
   readonly threshold?: Threshold
   readonly error?: boolean
 } {
-  const emailAddress: string = req.params.emailAddress
-  const secret = req.params.secret
-  const orientation: string = req.params.orientation
-  const priceString: string = req.params.price
-  if(isNaN(<any>priceString)) {
-    res.status(400).end()
+  try {
+    const { emailAddress, subscriber } = requestToSubscriber(req, res, true)
+    const orientation: ThresholdOrientation = requestToOrientation(req, res, true)
+    const price: number = requestToPrice(req, res, true)
+    const threshold: Threshold = { orientation, price }
+    return { emailAddress, subscriber, threshold }
+  } catch(e) {
     return {}
   }
-  if(orientation !== 'up') {
-    if(orientation !== 'down') {
-      res.status(400).end()
-      return {}
-    }
-  }
-  const threshold: Threshold = { orientation, price: +priceString }
-  const subscriber: Subscriber = subscribers[emailAddress]
-  if(subscriber) {
-    if(secret !== subscriber.secret) {
-      res.status(401).end()
-      return {}
-    }
-  }
-  return { emailAddress, subscriber, threshold }
 }
 
 app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:price', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
-    res.status(404).end()
     return
   }
   const thresholds = subscriber.thresholds
@@ -200,7 +248,6 @@ app.get('/api/users/:emailAddress/:secret/thresholds/add/:orientation/:price', (
 app.get('/api/users/:emailAddress/:secret/thresholds/remove/:orientation/:price', (req, res) => {
   const { emailAddress, subscriber, threshold } = requestToSubscriberAndThreshold(req, res)
   if(!subscriber) {
-    res.status(404).end()
     return
   }
   const thresholds = subscriber.thresholds
@@ -209,30 +256,16 @@ app.get('/api/users/:emailAddress/:secret/thresholds/remove/:orientation/:price'
   res.status(200).end()
 })
 app.post('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
-  const emailAddress: string = req.params.emailAddress
-  const secret: string = req.params.secret
-  const subscriber: Subscriber = subscribers[emailAddress]
+  const { emailAddress, subscriber } = requestToSubscriber(req, res)
   if(!subscriber) {
-    res.status(404).end()
-    return
-  }
-  if(secret !== subscriber.secret) {
-    res.status(401).end()
     return
   }
   subscribers = { ...subscribers, [emailAddress]: { ...subscriber, thresholds: req.body } }
   res.status(200).end()
 })
 app.get('/api/users/:emailAddress/:secret/thresholds', (req, res) => {
-  const emailAddress: string = req.params.emailAddress
-  const secret: string = req.params.secret
-  const subscriber: Subscriber = subscribers[emailAddress]
+  const { emailAddress, subscriber } = requestToSubscriber(req, res)
   if(!subscriber) {
-    res.status(404).end()
-    return
-  }
-  if(secret !== subscriber.secret) {
-    res.status(401).end()
     return
   }
   res.json(subscriber.thresholds).end()

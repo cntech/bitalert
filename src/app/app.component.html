@@ -5,6 +5,7 @@
 
 <div class="section">
   <dx-text-box #emailAddressInput
+    [inputAttr]="{ autocapitalize: 'off', autocorrect: 'off' }"
     placeholder="Get started with your e-mail address"
     [(value)]="emailAddress"
   ></dx-text-box>

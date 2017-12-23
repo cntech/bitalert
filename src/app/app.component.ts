@@ -125,9 +125,14 @@ export class AppComponent {
   onRowUpdated() {
     this.thresholds = this._thresholds // call the setter
   }
-  onResetAccountButtonClicked() {
-    localStorage.clear()
-    location.reload()
+  async onResetAccountButtonClicked() {
+    const emailAddress: string = this.emailAddress
+    const secret: string = this.secret
+    if(emailAddress && secret) {
+      await this.httpClient.get(`/api/unregister/${emailAddress}/${secret}`).toPromise()
+      localStorage.clear()
+      location.reload()
+    }
   }
 
 }
